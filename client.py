@@ -12,8 +12,6 @@ from network import Network
 
 logger = Logger()
 
-# write username at 18, 467
-
 class Network:
     def __init__(self, serverAddress, serverPort):
         self.serverAddress = serverAddress
