@@ -12,6 +12,8 @@ class assetManager:
 
          self.whiteMovingSprites = self.getImages("./Sprites/Player/White/Move", transform=True, list=True)
          self.whiteDeathSprites = self.getImages("./Sprites/Player/White/Death", transform=True, list=True)
+         self.redMovingSprites = self.getImages("./Sprites/Player/red/Move", transform=True, list=True)
+         self.redDeathSprites = self.getImages("./Sprites/Player/red/Death", transform=True, list=True)
          self.UI = self.getImages("./Sprites/UI", transform=False, list=False)
          logger.info(self.whiteMovingSprites, "WhiteChar")
          logger.info(self.whiteDeathSprites, "WhiteChar")

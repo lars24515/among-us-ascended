@@ -8,7 +8,7 @@ from logger import Logger
 AssetManager = assetManager()
 logger = Logger()
 
-availableColors = { "white": AssetManager.whiteMovingSprites[0] } 
+availableColors = { "white": AssetManager.whiteMovingSprites[0], "red": AssetManager.redMovingSprites[0] } 
 
 class Player(pygame.sprite.Sprite):
 
