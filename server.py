@@ -20,7 +20,7 @@ class Server:
       for client in clients:
          client.send(self.data)
 
-server = Server("192.168.10.189", 8080)
+server = Server("localhost", 8080)
 
 class ClientConnection:
    def __init__(self, connection, address):
