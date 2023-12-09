@@ -46,7 +46,7 @@ class Network:
                   else:
                      for char in game.players.sprites():
                            if char.color == data[senderId]["color"]:
-                              game.players.remove(char)
+                              game.players.sprites.remove(char)
                               newChar = Player(data[senderId]["x"], data[senderId]["y"], data[senderId]["name"])
                               newChar.color = data[senderId]["color"]
                               game.players.add(newChar)
@@ -193,7 +193,7 @@ class Menu:
       self.usernameRect.x, self.usernameRect.y = 30, 467
       self.usernameWriting = False
       self.IPWriting = False
-      self.ipInput = "localhost"
+      self.ipInput = "192.168.10.189"
       self.ipSize = 90
       self.ipFont = pygame.font.Font(None, self.ipSize)
       self.ipTextSurface = self.ipFont.render(self.ipInput, True, (255, 255, 255))
