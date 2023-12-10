@@ -25,8 +25,8 @@ class Player(pygame.sprite.Sprite):
       def update(self, angle, screen):
          adjusted_radius = self.radius / 2 * 1.8
 
-         center_x = self.player.position.x + self.player.width / 2
-         center_y = self.player.position.y + self.player.height / 2
+         center_x = self.player.position[0] + self.player.width / 2
+         center_y = self.player.position[1] + self.player.height / 2
 
          hand_x = center_x + adjusted_radius * math.cos(math.radians(angle))
          hand_y = center_y + adjusted_radius * math.sin(math.radians(angle))
@@ -59,15 +59,30 @@ class Player(pygame.sprite.Sprite):
       self.currentSprite = 0
       self.angle = 0
       self.id = id
+      self.movingSprites = None
+      self.deadSprites = None
       # log
       logger.info(f"{self.color}: {self.username} created at {self.position} ({self.id})", "Player")
+   
+   def updateSpritePath(self):
+      try:
+         print("self.color=",self.color)
+         match self.color:
+            case "white":
+               self.movingSprites = AssetManager.whiteMovingSprites
+               self.deadSprites = AssetManager.whiteDeathSprites
+            case "red":
+               self.movingSprites = AssetManager.redMovingSprites
+               self.deadSprites = AssetManager.redDeathSprites
+      except Exception as e:
+         logger.error(e, "Player")
 
    def calculate_velocity(self, cursor_position):
 
       max_velocity = 1.5
       min_velocity = 0.5
 
-      distance = self.position.distance_to(cursor_position)
+      distance = pygame.Vector2(self.position).distance_to(cursor_position)
       max_distance = 200.0 
       normalized_distance = min(distance / max_distance, 1.0)
 
@@ -93,8 +108,8 @@ class Player(pygame.sprite.Sprite):
 
    def update(self, screen, cursorPosition):
 
-      dx = cursorPosition.x - self.position.x
-      dy = cursorPosition.y - self.position.y
+      dx = cursorPosition.x - self.position[0]
+      dy = cursorPosition.y - self.position[1]
       angle = math.atan2(dy, dx)
       self.angle = math.degrees(angle)
 
@@ -111,12 +126,12 @@ class Player(pygame.sprite.Sprite):
          delta_x = move_distance * math.cos(move_angle)
          delta_y = move_distance * math.sin(move_angle)
 
-         self.position.x += delta_x
-         self.position.y += delta_y
+         self.position[0] += delta_x
+         self.position[1] += delta_y
 
          self.calculate_velocity(cursorPosition)
 
-         nextPosition = (int(self.position.x + delta_x), int(self.position.y + delta_y))
+         nextPosition = (int(self.position[0] + delta_x), int(self.position[1] + delta_y))
          if self.check_collision(nextPosition, screen):
                self.velocity = 0
       
@@ -128,10 +143,11 @@ class Player(pygame.sprite.Sprite):
 
       self.hand.update(self.angle, screen)
 
-      self.rect.x, self.rect.y = self.position
+      self.rect.x, self.rect.y = self.position[0], self.position[1]
 
-      if self.angle < -90 or self.angle >= 90:
-         self.image = AssetManager.whiteMovingSprites[int(self.currentSprite)]
-         self.flipSelfImage()
-      else:
-         self.image = AssetManager.whiteMovingSprites[int(self.currentSprite)]
+      if not self.movingSprites == None:
+         if self.angle < -90 or self.angle >= 90:
+            self.image = self.movingSprites[int(self.currentSprite)]
+            self.flipSelfImage()
+         else:
+            self.image = self.movingSprites[int(self.currentSprite)]

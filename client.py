@@ -104,7 +104,7 @@ class Game:
       staminaBar = pygame.transform.scale(AssetManager.UI["stamina_bar"], (int(player.stamina) * 2, 16))
       self.screen.blit(staminaBar, (20, self.SCREEN_Y - 30))
 
-      self.screen.blit(self.usernameSurface, (player.position.x - self.usernameSurface.get_width() // 4, player.position.y - int(self.usernameSurface.get_height())))
+      self.screen.blit(self.usernameSurface, (player.position[0] - self.usernameSurface.get_width() // 4, player.position[1] - int(self.usernameSurface.get_height())))
    
    def start(self):
 

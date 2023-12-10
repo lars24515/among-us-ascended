@@ -25,18 +25,37 @@ class Network:
    def processData(self, data):
       match data["eventType"]:
          case "playerJoined":
-            data = data["playerData"]
-            newPlayer = Player(data["position"][0], data["position"][1], data["username"], data["color"], data["playerId"])
+            print("received player joined")
+            
+            try:
+               data = data["playerData"]["playerData"]
+            except KeyError:
+               data = data["playerData"]
+
+            newPlayer = Player(data["position"][0], data["position"][1], data["name"], data["playerId"])
             self.playerDict[data["playerId"]] = newPlayer
             self.playerSprites.add(newPlayer)
             logger.success(f"Player {data['name']} joined", "Client")
          case "playerLeft":
-            pass
+            player = self.playerDict[data["playerId"]]
+            self.playerSprites.remove(player)
+            logger.info(f"Player {data['name']} left the game", "Client")
+
          case "playerMoved":
-            pass
+            try:
+               print(self.playerDict, data["playerId"])
+               player = self.playerDict[data["playerId"]]
+            except KeyError:
+               logger.error(f"Player {data['playerId']} not found", "Client")
+               return
+
+            player.position = data["position"]
+            player.currentSprite = data["currentSprite"]
+
          case "updatePlayerColor":
             self.player.color = data["newColor"]
             logger.success(f"Updated player color to {self.player.color}", "Client")
+            self.player.updateSpritePath()
 
    def send(self, data):
       self._queue.append(data)

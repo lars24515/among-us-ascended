@@ -30,7 +30,53 @@ class Server:
       for client in clients:
          pass
       #set roles
+
+   def handlePlayerMovedEvent(self, data):
+      for client in clients:
+         if client.address[0] == data["playerId"]:
+            return
+         
+         client.send(data)
+
+   def handlePlayerJoinedEvent(self, data):
+      self.playerCount += 1
+      logger.info(f"{self.playerCount} of {self.minimumPlayers} players connected", "Server")
+      data = data["playerData"]
+
+      newColor = self.assignColor(data["playerId"])
+
+      logger.info(f"Player {data['name']}: {newColor} joined", "Server")
+      self.playerIds[data["playerId"]] = "defaultRole"
+
+      for client in clients:
+         try:
+            if client.address[0] == ["playerId"]:
+               return
+         except KeyError:
+            if client.address[0] == data["playerData"]["playerId"]:
+               return
+
+         # client is not self client
+         # so tell client that a new player that isnt 'me' joined
+         print("sending player joined")
+
+         data = {
+            "eventType": "playerJoined",
+            "playerData": data
+         }
+
+         client.send(data)
+
+      if self.playerCount == self.minimumPlayers:
+         logger.info(f"Game starting with {self.playerCount} out of {self.minimumPlayers} players", "Server")
+         self.gameStarted = True
+         self.handOutRoles()
    
+   def handlePlayerLeftEvent(self, data):
+      logger.info(f"Player {data['name']} left", "Server")
+      self.playerCount -= 1
+      # Also free up that color as available
+
    def assignColor(self, playerId):
       color = random.choice(list(self.availableColors))
       self.assignedColors[playerId] = {color: self.availableColors[color]}
@@ -51,33 +97,13 @@ class Server:
    def processData(self, data):
       match data["eventType"]:
          case "playerJoined":
-            self.playerCount += 1
-            logger.info(f"{self.playerCount} of {self.minimumPlayers} players connected", "Server")
-            data = data["playerData"]
-
-            newColor = self.assignColor(data["playerId"])
-
-            logger.info(f"Player {data['name']}: {newColor} joined", "Server")
-            self.playerIds[data["playerId"]] = "defaultRole"
-
-            for client in clients:
-               if client.address[0] == data["playerId"]:
-                  return
-               # client is not self client
-               # so tell client that a new player that isnt 'me' joined
-               client.send(data)
-
-            if self.playerCount == self.minimumPlayers:
-               logger.info(f"Game starting with {self.playerCount} out of {self.minimumPlayers} players", "Server")
-               self.gameStarted = True
-               self.handOutRoles()
+            self.handlePlayerJoinedEvent(data)
 
          case "playerLeft":
-            logger.info(f"Player {data['name']} left", "Server")
-            self.playerCount -= 1
+            self.handlePlayerLeftEvent(data)
+            
          case "playerMoved":
-            #logger.info(f"Player {data['name']} moved to {data['position']}", "Server")
-            pass
+            self.handlePlayerMovedEvent(data)
    
   
 
