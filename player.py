@@ -8,8 +8,6 @@ from logger import Logger
 AssetManager = assetManager()
 logger = Logger()
 
-availableColors = { "white": AssetManager.whiteMovingSprites[0], "red": AssetManager.redMovingSprites[0] } 
-
 class Player(pygame.sprite.Sprite):
 
    class Hand:
@@ -39,14 +37,14 @@ class Player(pygame.sprite.Sprite):
          pygame.draw.circle(screen, (0, 0, 0), self.position, self.thickness + 2)
          pygame.draw.circle(screen, self.color, self.position, self.thickness)
 
-   def __init__(self, x, y, username):
+   def __init__(self, x, y, username, id):
       super().__init__()
       self.username = username
       self.x = x
       self.y = y
       self.position = pygame.Vector2(x, y)
-      self.color = random.choice(list(availableColors.keys()))
-      self.image = availableColors[self.color]
+      self.color = "None"
+      self.image = AssetManager.defaultImage
       self.rect = self.image.get_rect()
       self.rect.x, self.rect.y = self.x, self.y
       self.height = self.image.get_height()
@@ -60,8 +58,9 @@ class Player(pygame.sprite.Sprite):
       self.isAnimating = False
       self.currentSprite = 0
       self.angle = 0
+      self.id = id
       # log
-      logger.info(f"Player {self.color}: {self.username} created at {self.position}. Animating: {self.isAnimating} Sprinting: {self.sprinting}", "PlayerManager")
+      logger.info(f"{self.color}: {self.username} created at {self.position} ({self.id})", "Player")
 
    def calculate_velocity(self, cursor_position):
 

@@ -12,52 +12,6 @@ from network import Network
 
 logger = Logger()
 
-class Network:
-    def __init__(self, serverAddress, serverPort):
-        self.serverAddress = serverAddress
-        self.serverPort = serverPort
-        self._queue = []
-        self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connection.settimeout(1)
-        self.connection.connect((self.serverAddress, self.serverPort))
-        self.connection.settimeout(None)
-        self.serverAddress, self.serverPort = self.connection.getpeername()  # Get the server address and port
-        logger.success(f"Connected to server at {self.serverAddress}:{self.serverPort}", "Client")
-        self.clientIds = []
-
-    def send(self, data):
-        self._queue.append(data)
-
-    def thread(self):
-        while True:
-            try:
-               received_data = self.connection.recv(1024).decode()
-               #print("Received data:", received_data)
-               data = json.loads(received_data)
-                
-               if data is not None:
-                  #logger.info(f"Received {data} from server", "Client")
-                  senderId = list(data.keys())[0]
-                  if senderId not in self.clientIds:
-                     self.clientIds.append(senderId)
-                     newChar = Player(data[senderId]["x"], data[senderId]["y"], data[senderId]["name"])
-                     newChar.color = data[senderId]["color"]
-                     game.players.add(newChar)
-                  else:
-                     for char in game.players.sprites():
-                           if char.color == data[senderId]["color"]:
-                              game.players.remove(char)
-                              newChar = Player(data[senderId]["x"], data[senderId]["y"], data[senderId]["name"])
-                              newChar.color = data[senderId]["color"]
-                              game.players.add(newChar)
-
-               nextData = self._queue.pop(0) if self._queue else None
-               self.connection.sendall(json.dumps(nextData).encode())
-
-            except socket.error:
-               break
-        logger.error("Lost connection to server", "Client")
-
 class Game:
 
    def __init__(self):
@@ -66,43 +20,50 @@ class Game:
       self.SCREEN_Y = 641
       self.screen = pygame.display.set_mode((self.SCREEN_X, self.SCREEN_Y))
       self.running = True
-      self.players = pygame.sprite.Group()
       self.clock = pygame.time.Clock()
-      self.player = None
-      self.players = pygame.sprite.Group()
+      self.playerDict = {} # john: (player object), jane, jack, game.players[name].position = clientData["position"]
+      self.playerSprites = pygame.sprite.Group()
       self.network = None
-      self.data = {
-         "name": "none",
-         "color": "none",
-         "position": (0, 0),
-         "image": None,
-         "role": "none",
-         "alive": True
+      self.started = False
+   
+   def playerMovedEvent(self):
+      return {
+         "eventType": "playerMoved",
+         "playerId": player.id,
+         "name": player.username,
+         "position": tuple(player.position),
+         "color": player.color,
+         "currentSprite": player.currentSprite
       }
    
-   def updateData(self, selfPlayer):
-      game.data = {
-         "name": menu.username,
-         "color": player.color,
-         "x": selfPlayer.x,
-         "y": selfPlayer.y,
-         "currentSprite": player.currentSprite,
-         "role": "crewmate",
-         "alive": True
+   def playerJoinedEvent(self):
+      return {
+         "eventType": "playerJoined",
+         "playerData": self.playerMovedEvent()
       }
-      
-      # Send this new data to the server
-      print("position:", selfPlayer.position)
-      print("velocity:", selfPlayer.velocity)
-      print("angle:", selfPlayer.angle)
-      self.network.send(game.data)
+
+   def playerLeftEvent(self):
+      return {
+         "eventType": "playerLeft",
+         "playerId": player.id
+      }
+
+   def playerUpdatedColorEvent(self):
+      return {
+         "eventType": "playerUpdatedColor",
+         "playerId": player.id,
+         "newColor": player.color
+      }
 
    def handleEventKey(self, key):
       # handle key events
       if key == pygame.K_ESCAPE:
-         self.running = False
+         self.network.send(self.playerLeftEvent())
          game.network.connection.close()
          logger.warn("Shutting down client", "Client")
+         self.running = False
+         sys.exit()
+
       if key == pygame.K_LSHIFT:
          player.sprinting = not player.sprinting
 
@@ -115,7 +76,7 @@ class Game:
       
       if keys[pygame.K_w]:
          player.animate()
-         game.updateData(player)
+         self.network.send(self.playerMovedEvent())
       
       if event.type == pygame.KEYUP:
          if event.key == pygame.K_w:
@@ -131,20 +92,19 @@ class Game:
    
    def draw(self):
 
-      self.screen.blit(AssetManager.UI["map"], (0, 0))
+      self.screen.fill((255, 255, 255) if not self.started else (0, 0, 0))
+      self.screen.blit(AssetManager.UI["map"], (0, 0) if not self.started else None)
 
-      # handle blits
-      
-      self.players.update(self.screen, pygame.Vector2(pygame.mouse.get_pos()))
-      self.players.draw(self.screen)
-      self.screen.blit(AssetManager.UI["shadow"], (self.calculateShadow()))
+      self.playerSprites.update(self.screen, pygame.Vector2(pygame.mouse.get_pos()))
+      self.playerSprites.draw(self.screen)
+
+      if game.started:
+         self.screen.blit(AssetManager.UI["shadow"], self.calculateShadow())
 
       staminaBar = pygame.transform.scale(AssetManager.UI["stamina_bar"], (int(player.stamina) * 2, 16))
       self.screen.blit(staminaBar, (20, self.SCREEN_Y - 30))
 
       self.screen.blit(self.usernameSurface, (player.position.x - self.usernameSurface.get_width() // 4, player.position.y - int(self.usernameSurface.get_height())))
-
-     # print(self.players.sprites())                                 # why arent players being drawn?
    
    def start(self):
 
@@ -234,6 +194,7 @@ class Menu:
             game.network = Network(serverAddress=menu.ipInput, serverPort=8080)
             self.running = False
          except socket.error as e:
+            #self.running = False # this shoudl be removed, only temporary test
             logger.error(e, "Network")
             return
            
@@ -277,7 +238,7 @@ class Menu:
       self.ipTextSurface = self.ipFont.render(self.ipInput, True, (255, 255, 255))
       self.screen.blit(self.ipTextSurface, (self.ipTextRect.topleft))
       '''pygame.draw.rect(self.screen, (255, 0, 0), self.ipTextRect, 2)
-      pygame.draw.rect(self.screen, (255, 0, 0), self.usernameRect, 2)'''
+      pygame.draw.rect(self.screen, (255, 0, 0), self.usernameRect, 2)''' # debugging
    
    def start(self):
 
@@ -304,11 +265,18 @@ menu.start()  # This will finish when the user connects or exits
 #clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # maybe something along these lines
 #clientSocket.connect((menu.ipInput, 8080))
 
-player = Player(617, 152, menu.username)
+player = Player(617, 152, menu.username, game.network.connection.getsockname()[1])
+game.playerDict[player.id] = player
+game.playerSprites.add(game.playerDict[player.id])
 
 thread = threading.Thread(target=game.network.thread, daemon=True)
 thread.start()
-game.updateData(player)
 
+# set network attribuets, player, playerdict, etc.
+game.network.player = player
+game.network.playerDict = game.playerDict
+game.network.playerSprites = game.playerSprites
+
+game.network.send(game.playerJoinedEvent())
 
 game.start()

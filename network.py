@@ -1,19 +1,42 @@
 import socket
 import json
 
+from logger import Logger
+from player import Player
+
+logger = Logger()
+
 class Network:
-   def __init__(self):
-      server_addr = "localhost"
-      port = 8080
-
+   def __init__(self, serverAddress, serverPort):
+      self.serverAddress = serverAddress
+      self.serverPort = serverPort
       self._queue = []
-
-      self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      self.conn.settimeout(1)
-      self.conn.connect((server_addr, port))
-      self.conn.settimeout(None)
-
-      print("Connected to server!")
+      self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self.connection.settimeout(1)
+      self.connection.connect((self.serverAddress, self.serverPort))
+      self.connection.settimeout(None)
+      self.serverAddress, self.serverPort = self.connection.getpeername()  # Get the server address and port
+      self.playerDict = None
+      self.playerSprites = None
+      self.player = None
+      logger.success(f"Connected to server at {self.serverAddress}:{self.serverPort}", "Client")
+      self.clientIds = []
+      
+   def processData(self, data):
+      match data["eventType"]:
+         case "playerJoined":
+            data = data["playerData"]
+            newPlayer = Player(data["position"][0], data["position"][1], data["username"], data["color"], data["playerId"])
+            self.playerDict[data["playerId"]] = newPlayer
+            self.playerSprites.add(newPlayer)
+            logger.success(f"Player {data['name']} joined", "Client")
+         case "playerLeft":
+            pass
+         case "playerMoved":
+            pass
+         case "updatePlayerColor":
+            self.player.color = data["newColor"]
+            logger.success(f"Updated player color to {self.player.color}", "Client")
 
    def send(self, data):
       self._queue.append(data)
@@ -21,13 +44,16 @@ class Network:
    def thread(self):
       while True:
          try:
-               data = json.loads(self.conn.recv(1024).decode())
-               if data is not None:
-                  print("received", data)
+            received_data = self.connection.recv(1024).decode()
+            #print("Received data:", received_data)
+            data = json.loads(received_data)
+               
+            if data is not None:
+               self.processData(data)
 
-               next_data = self._queue.pop(0) if self._queue else None
-               self.conn.sendall(json.dumps(next_data).encode())
+            nextData = self._queue.pop(0) if self._queue else None
+            self.connection.sendall(json.dumps(nextData).encode())
 
          except socket.error:
-               break
-      print("Lost connection.")
+            break
+      logger.error("Lost connection to server\n", "Client")
