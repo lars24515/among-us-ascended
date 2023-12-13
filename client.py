@@ -265,7 +265,7 @@ menu.start()  # This will finish when the user connects or exits
 #clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # maybe something along these lines
 #clientSocket.connect((menu.ipInput, 8080))
 
-player = Player(617, 152, menu.username, game.network.connection.getsockname()[1])
+player = Player(700, 152, menu.username, game.network.getClientAddress())
 game.playerDict[player.id] = player
 game.playerSprites.add(game.playerDict[player.id])
 

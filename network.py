@@ -21,21 +21,32 @@ class Network:
       self.player = None
       logger.success(f"Connected to server at {self.serverAddress}:{self.serverPort}", "Client")
       self.clientIds = []
+   
+   def getClientAddress(self):
+      return self.connection.getsockname()[1]
       
    def processData(self, data):
       match data["eventType"]:
          case "playerJoined":
-            print("received player joined")
+            if data["playerData"]["playerId"] == self.getClientAddress():
+               return
             
+            print("received player joined:", data)
+            data = data["playerData"]
             try:
-               data = data["playerData"]["playerData"]
-            except KeyError:
-               data = data["playerData"]
+               newPlayer = Player(data["position"][0], data["position"][1], data["name"], data["playerId"])
+            except KeyError as e:
+               print(data)
+               print(e)
 
-            newPlayer = Player(data["position"][0], data["position"][1], data["name"], data["playerId"])
-            self.playerDict[data["playerId"]] = newPlayer
-            self.playerSprites.add(newPlayer)
-            logger.success(f"Player {data['name']} joined", "Client")
+
+            try:
+               self.playerDict[data["playerId"]] = newPlayer
+               self.playerSprites.add(newPlayer)
+               logger.success(f"Player {data['name']} joined", "Client")
+            except Exception as e:
+               logger.error(e, "Client")
+
          case "playerLeft":
             player = self.playerDict[data["playerId"]]
             self.playerSprites.remove(player)
@@ -43,7 +54,6 @@ class Network:
 
          case "playerMoved":
             try:
-               print(self.playerDict, data["playerId"])
                player = self.playerDict[data["playerId"]]
             except KeyError:
                logger.error(f"Player {data['playerId']} not found", "Client")

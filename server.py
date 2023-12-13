@@ -1,6 +1,7 @@
 import socket
 import json
 import random
+import sys
 
 from threading import Thread
 
@@ -39,33 +40,25 @@ class Server:
          client.send(data)
 
    def handlePlayerJoinedEvent(self, data):
+      # YOU NEED TO SEND PLAYER JOINED OF ALL OTHER PLAYERS TO THIS NEW CLIENT SINCE IT HASNT RECEIVED
+      # THE JOIN EVENTS BEFORE, THEREFORE IT CANNOT SEE THEM
       self.playerCount += 1
       logger.info(f"{self.playerCount} of {self.minimumPlayers} players connected", "Server")
-      data = data["playerData"]
+      receivedData = data["playerData"]
 
-      newColor = self.assignColor(data["playerId"])
+      newColor = self.assignColor(receivedData["playerId"])
 
-      logger.info(f"Player {data['name']}: {newColor} joined", "Server")
-      self.playerIds[data["playerId"]] = "defaultRole"
+      logger.info(f"Player {receivedData['name']}: {newColor} joined", "Server")
+      self.playerIds[receivedData["playerId"]] = "defaultRole"
 
       for client in clients:
-         try:
-            if client.address[0] == ["playerId"]:
-               return
-         except KeyError:
-            if client.address[0] == data["playerData"]["playerId"]:
-               return
+         if not client.getClientAddress() == ["playerId"]:
+            # client is not self client
+            # so tell client that a new player that isnt 'me' joined
+            data["eventType"] = "playerJoined"
+            print("sending player joined:", data)
 
-         # client is not self client
-         # so tell client that a new player that isnt 'me' joined
-         print("sending player joined")
-
-         data = {
-            "eventType": "playerJoined",
-            "playerData": data
-         }
-
-         client.send(data)
+            client.send(data)
 
       if self.playerCount == self.minimumPlayers:
          logger.info(f"Game starting with {self.playerCount} out of {self.minimumPlayers} players", "Server")
@@ -117,6 +110,9 @@ class ClientConnection:
    
    def send(self, data):
       self._queue.append(data)
+   
+   def getClientAddress(self):
+      return self.connection.getsockname()[1]
    
    def thread(self):
       while True:
