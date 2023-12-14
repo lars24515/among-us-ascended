@@ -16,9 +16,7 @@ class assetManager:
          self.redDeathSprites = self.getImages("./Sprites/Player/red/Death", transform=True, list=True)
          self.defaultImage = self.getImages("./Sprites/Player", transform=True, list=True)[0]
          self.UI = self.getImages("./Sprites/UI", transform=False, list=False)
-         logger.info(self.whiteMovingSprites, "WhiteChar")
-         logger.info(self.whiteDeathSprites, "WhiteChar")
-
+         
       def getImages(self, path, transform=True, list=False):
          os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
          new_map = {}
@@ -39,7 +37,7 @@ class assetManager:
                   else: # its a list
                      newList.append(image)
 
-                  logger.info(f"loaded {fileName} with transform {transform}", "AssetManager")
+                  #logger.info(f"loaded {fileName} with transform {transform}", "AssetManager")
 
          logger.success(f"loaded all files from {path}", "AssetManager")
 

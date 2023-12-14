@@ -19,7 +19,7 @@ class Network:
       self.playerDict = None
       self.playerSprites = None
       self.player = None
-      logger.success(f"Connected to server at {self.serverAddress}:{self.serverPort}", "Client")
+      logger.success(f"Connected to server at {self.serverAddress}:{self.serverPort}", f"Client {self.getClientAddress()}")
       self.clientIds = []
    
    def getClientAddress(self):
@@ -28,24 +28,13 @@ class Network:
    def processData(self, data):
       match data["eventType"]:
          case "playerJoined":
-            if data["playerData"]["playerId"] == self.getClientAddress():
-               return
-            
-            print("received player joined:", data)
+            logger.info(f"received {data['eventType']}", "Networking")
             data = data["playerData"]
-            try:
-               newPlayer = Player(data["position"][0], data["position"][1], data["name"], data["playerId"])
-            except KeyError as e:
-               print(data)
-               print(e)
-
-
-            try:
-               self.playerDict[data["playerId"]] = newPlayer
-               self.playerSprites.add(newPlayer)
-               logger.success(f"Player {data['name']} joined", "Client")
-            except Exception as e:
-               logger.error(e, "Client")
+            newPlayer = Player(data["position"][0], data["position"][1], data["name"], data["playerId"])
+            self.playerDict[data["playerId"]] = newPlayer
+            print(f"SET PLAYER ID {data['playerId']} IN {self.getClientAddress()} DICT")          
+            self.playerSprites.add(newPlayer)            
+            logger.success(f"Player {data['name']} joined", "Client")
 
          case "playerLeft":
             player = self.playerDict[data["playerId"]]
@@ -63,9 +52,15 @@ class Network:
             player.currentSprite = data["currentSprite"]
 
          case "updatePlayerColor":
-            self.player.color = data["newColor"]
-            logger.success(f"Updated player color to {self.player.color}", "Client")
-            self.player.updateSpritePath()
+            try:
+               print("we're here")
+               self.player.color = data["newColor"]
+               print("well look at that")
+               self.player.updateSpritePath()
+               print("should've updated sprite path by now :)")
+            except Exception as e:
+               logger.error(e, f"{[self.getClientAddress()]}Networking")
+            
 
    def send(self, data):
       self._queue.append(data)
